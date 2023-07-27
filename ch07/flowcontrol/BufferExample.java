@@ -1,0 +1,43 @@
+package ch07.flowcontrol;
+
+import commons.CommonUtils;
+import commons.Log;
+import io.reactivex.Observable;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+public class BufferExample {
+    public static void main(String[] args) {
+
+        // buffer() 는 일정 시간 동안 데이터를 모아두었다가 한꺼번에 발행.
+        // 넘치는 데이터 흐름을 제어 할 필요가 있을 때 활용
+
+        Integer[] data = {1, 2, 3, 4, 5, 6};
+
+        CommonUtils.exampleStart();
+
+        // 앞의 3개 데이터는 100ms 간격으로 발행
+        Observable<Integer> earlySource = Observable.fromArray(data)
+                .take(3)
+                .zipWith(Observable.interval(100L, TimeUnit.MILLISECONDS), (a, b) -> a);
+
+        // 가운데 1개 데이터는 300ms 후에 발행
+        Observable<Integer> middleSource = Observable.just(data[3])
+                .zipWith(Observable.timer(300L, TimeUnit.MILLISECONDS), (a, b) -> a);
+
+
+        // 마지막 2개 데이터는 100ms 후에 발행
+        Observable<Integer> lateSource = Observable.just(data[4], data[5])
+                .zipWith(Observable.interval(100L, TimeUnit.MILLISECONDS), (a, b) -> a);
+
+        // 3개씩 모아서 한꺼번에 발행
+        // buffer(2, 3) 일 경우 2개 데이터를 모으고 개는 스킵
+        Observable<List<Integer>> source = Observable.concat(earlySource, middleSource, lateSource)
+                .buffer(3);
+
+        source.subscribe(Log::it);
+
+        CommonUtils.sleep(1000);
+    }
+}
